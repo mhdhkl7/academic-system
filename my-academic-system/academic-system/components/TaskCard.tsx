@@ -1,41 +1,54 @@
-"use client"; // Wajib: Menandakan ini komponen interaktif
+"use client";
 
 import { useState } from "react";
 import { BookOpen, Code, Calculator, Layout, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
-// Tipe data untuk props (biar TypeScript senang)
+// Update Interface: Tambah isCompleted
 interface TaskProps {
   id: string;
   name: string;
   type: string;
   sks: number;
+  isCompleted: boolean; // <--- INI PROPS BARU
 }
 
-export default function TaskCard({ id, name, type, sks }: TaskProps) {
-  const [status, setStatus] = useState<"IDLE" | "LOADING" | "VALID" | "INVALID">("IDLE");
-  const [message, setMessage] = useState("");
+export default function TaskCard({ id, name, type, sks, isCompleted }: TaskProps) {
+  // LOGIC BARU: Cek isCompleted saat pertama kali loading
+  // Kalau true, status langsung VALID (Hijau)
+  const [status, setStatus] = useState<"IDLE" | "LOADING" | "VALID" | "INVALID">(
+    isCompleted ? "VALID" : "IDLE"
+  );
 
-  // GANTI INI DENGAN USERNAME GITHUB ASLI KAMU
-  const GITHUB_USERNAME = "mhdhkl7"; 
+  const [message, setMessage] = useState(
+    isCompleted ? "Misi selesai! Streak aman. 🔥" : ""
+  );
+
+  const GITHUB_USERNAME = "mhdhkl7"; // Username kamu
 
   const handleCheck = async () => {
+    // Jangan cek lagi kalau sudah valid
+    if (status === "VALID") return;
+
     setStatus("LOADING");
     setMessage("");
 
     try {
       const res = await fetch("/api/validate", {
         method: "POST",
-        body: JSON.stringify({ username: GITHUB_USERNAME }),
+        body: JSON.stringify({
+          username: GITHUB_USERNAME,
+          courseId: id // Kirim ID buat save ke DB
+        }),
       });
 
       const data = await res.json();
 
       if (data.valid) {
         setStatus("VALID");
-        setMessage("Streak diamankan! 🔥");
+        setMessage(data.message || "Streak diamankan! 🔥");
       } else {
         setStatus("INVALID");
-        setMessage("Belum ada commit hari ini. Push dulu!");
+        setMessage(data.message || "Belum ada commit hari ini.");
       }
     } catch (error) {
       setStatus("INVALID");
@@ -76,12 +89,12 @@ export default function TaskCard({ id, name, type, sks }: TaskProps) {
         </div>
 
         {/* Tombol Interaktif */}
-        <button 
+        <button
           onClick={handleCheck}
           disabled={status === "LOADING" || status === "VALID"}
           className={`p-2 rounded-full transition-all ${
-            status === "VALID" 
-              ? "text-green-400 bg-green-500/20 cursor-default" 
+            status === "VALID"
+              ? "text-green-400 bg-green-500/20 cursor-default"
               : "text-slate-600 hover:bg-slate-800 hover:text-white"
           }`}
         >
@@ -104,7 +117,7 @@ export default function TaskCard({ id, name, type, sks }: TaskProps) {
             "{type === 'HITUNG' ? "Kerjakan 2 soal latihan." : "Push kode ke GitHub."}"
           </p>
         )}
-        
+
         {/* Pesan Validasi */}
         {message && (
           <p className={`font-semibold ${status === "VALID" ? "text-green-400" : "text-red-400"}`}>

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import TaskCard from "@/components/TaskCard"; // Import komponen baru
+import TaskCard from "@/components/TaskCard";
 import { Layout } from "lucide-react";
 
 function getTodayDayID() {
@@ -12,9 +12,27 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const todayDay = getTodayDayID();
   
-  // Ambil data matkul hari ini (termasuk Minggu/Day 7 yang baru kamu suntik)
+  // Waktu Mulai & Akhir Hari Ini (Untuk filter log)
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  // LOGIC BARU: Ambil Matkul + Log Hari Ini
   const todaysMissions = await prisma.course.findMany({
     where: { day: todayDay },
+    include: {
+      logs: {
+        where: {
+          date: {
+            gte: startOfDay,
+            lte: endOfDay
+          },
+          status: "DONE"
+        }
+      }
+    }
   });
 
   return (
@@ -42,13 +60,14 @@ export default async function Home() {
         {todaysMissions.length > 0 ? (
           <div className="grid gap-4">
             {todaysMissions.map((mission) => (
-              /* PANGGIL KOMPONEN DI SINI */
               <TaskCard 
                 key={mission.id}
                 id={mission.id}
                 name={mission.name}
                 type={mission.type}
                 sks={mission.sks}
+                // LOGIC BARU: Cek apakah logs ada isinya?
+                isCompleted={mission.logs.length > 0} 
               />
             ))}
           </div>
